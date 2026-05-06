@@ -144,7 +144,7 @@ pip install -r requirements.txt
 
 > _To be added in Phase 2_
 
-Source: [NYC Open Data — Restaurant Inspection Results](https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/43nn-pn8j)
+Source: [Chicago Open Data Portal — Food Inspections](https://data.cityofchicago.org/Health-Human-Services/Food-Inspections/4ijn-s7e5/about_data)
 
 ---
 
