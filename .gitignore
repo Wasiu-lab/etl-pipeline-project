@@ -10,6 +10,7 @@ __pycache__/
 
 # Parquet files (too large for GitHub usually)
 data/parquet/
+data/raw/
 
 # Jupyter checkpoints
 .ipynb_checkpoints/
