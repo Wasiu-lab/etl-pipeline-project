@@ -13,9 +13,6 @@ def transform(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
     Isolating it means you can test, modify, or replace it without
     touching extract or load logic.
 
-    Source dataset: Chicago Food Inspections (City of Chicago Open Data)
-    Rows: ~309,809 | Columns: 17
-
     Args:
         df:           raw DataFrame from extract phase
         output_path:  where to write the cleaned Parquet file
@@ -109,10 +106,10 @@ def transform(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
     # each column represents. Document your decisions clearly.
     # ------------------------------------------------------------------
 
-    # Violations: null means no violations were recorded during inspection
+    # Violations: null means no violations were recorded during inspection therefore we can fill with no violations recorded
     df["violations"] = df["violations"].fillna("No Violations Recorded")
 
-    # AKA name: not every business has one — fill with the business name
+    # AKA name: not every business has another bname that it is called, so we fill with the business name
     df["aka_name"] = df["aka_name"].fillna(df["business_name"])
 
     # Facility type: unknown type — label it explicitly
@@ -142,7 +139,7 @@ def transform(df: pd.DataFrame, output_path: str) -> pd.DataFrame:
         df["risk"]
         .str.extract(r"\((.*?)\)")   # extract text inside parentheses
         .squeeze()                    # convert single-column DataFrame to Series
-        .fillna("Unknown")
+        .fillna("Unknown")  # if no match, label as 'Unknown'
     )
 
     print("[TRANSFORM] risk_level column extracted from risk column")
