@@ -142,22 +142,18 @@ pip install -r requirements.txt
 
 ## 📊 Dataset
 
-> _To be added in Phase 2_
-
 Source: [Chicago Open Data Portal — Food Inspections](https://data.cityofchicago.org/Health-Human-Services/Food-Inspections/4ijn-s7e5/about_data)
 
 ---
 
 ## 🔄 Pipeline Overview
 
-> _To be expanded as each phase is completed_
-
 ```
 [CSV Source]
      ↓
   extract.py       ← reads raw CSV into pandas
      ↓
-  transform.py     ← cleans, reshapes, adds derived columns
+  transform.py     ← cleans, reshapes, remove nulls, and adds derived columns
      ↓
   data/parquet/    ← saves as Parquet (data lake)
      ↓
@@ -170,9 +166,8 @@ Source: [Chicago Open Data Portal — Food Inspections](https://data.cityofchica
 
 ## ☁️ Cloud Deployment
 
-> _To be documented in Phase 6_
 
-The pipeline will be repointed to a cloud-hosted MySQL instance on **Railway.app** (free tier) to simulate a real-world production environment. No code changes required — only the `.env` credentials will be updated.
+The pipeline will be repointed to a cloud-hosted MySQL instance on **Railway.app** (free tier) to simulate a real-world production environment. No code changes is required — only the `.env` credentials will be updated to that of the cloud.
 
 ---
 
@@ -184,18 +179,6 @@ The pipeline will be repointed to a cloud-hosted MySQL instance on **Railway.app
 - MySQL as a relational data warehouse
 - Managing credentials securely with `.env`
 - Structuring Python projects for readability and reuse
-
----
-
-## 📝 Changelog
-
-### v0.1.0 — Phase 1 Complete
-- Initialised project repository and folder structure
-- Configured virtual environment and installed dependencies
-- Set up `.env` credential management
-- Created local MySQL database (`etl_pipeline`)
-- Verified database connection via `test_connection.py`
-- Configured `.gitignore` to protect credentials and exclude generated files
 
 ---
 
