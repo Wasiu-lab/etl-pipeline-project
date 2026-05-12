@@ -181,7 +181,22 @@ The pipeline will be repointed to a cloud-hosted MySQL instance on **Railway.app
 - Structuring Python projects for readability and reuse
 
 ---
+## Cloud Deployment
 
+The pipeline is deployed against a live **AWS RDS MySQL** instance (free tier).
+
+| Component       | Detail                              |
+|-----------------|-------------------------------------|
+| Cloud Provider  | Amazon Web Services (AWS)           |
+| Service         | Amazon RDS                          |
+| Engine          | MySQL 8.0                           |
+| Instance type   | db.t3.micro (free tier)             |
+| Region          | eu-west-2 (London)                  |
+| Access          | Public endpoint, restricted by IP   |
+
+Same pipeline code runs locally and in cloud — only `.env` credentials change.
+
+---
 ## 👤 Author
 
 **Abdul**  
