@@ -65,3 +65,10 @@ variable "db_allocated_storage" {
   type    = number
   default = 20
 }
+
+# Event schedule and trigger
+variable "schedule_expression" {
+  description = "EventBridge schedule expression for pipeline schedule"
+  type        = string
+  default     = "rate(20 minutes)"
+}
