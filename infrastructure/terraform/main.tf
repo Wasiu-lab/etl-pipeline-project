@@ -158,7 +158,7 @@ resource "aws_security_group" "rds" {
 
 resource "aws_db_subnet_group" "main" {
   name        = "${var.project_name}-db-subnet-group"
-  description = "Subnet group for ETL pipeline RDS — spans 2 private subnets"
+  description = "Subnet group for ETL pipeline RDS which spans 2 private subnets"
   subnet_ids  = [
     aws_subnet.private_1.id,
     aws_subnet.private_2.id
