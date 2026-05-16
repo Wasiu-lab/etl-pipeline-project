@@ -26,3 +26,18 @@ output "public_subnet_2_id" {
 output "rds_security_group_id" {
   value = aws_security_group.rds.id
 }
+
+# output "s3_bucket_name" {
+#   description = "S3 data lake bucket name - use this to upload your CSV"
+#   value       = aws_s3_bucket.data_lake.bucket
+# }
+
+# output "lambda_function_name" {
+#   description = "Lambda function name - use this to invoke manually"
+#   value       = aws_lambda_function.etl_pipeline.function_name
+# }
+
+# output "eventbridge_schedule" {
+#   description = "EventBridge schedule expression"
+#   value       = aws_cloudwatch_event_rule.pipeline_schedule.schedule_expression
+# }

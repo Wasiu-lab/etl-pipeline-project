@@ -53,89 +53,89 @@ resource "aws_security_group_rule" "rds_from_lambda" {
   source_security_group_id = aws_security_group.lambda.id
 }
 
-# ------------------------------------------------------------------
-# Lambda Function
-# The deployment package (zip) is created by deploy.ps1 and
-# uploaded to S3 before Terraform runs.
-# ------------------------------------------------------------------
+# # ------------------------------------------------------------------
+# # Lambda Function
+# # The deployment package (zip) is created by deploy.ps1 and
+# # uploaded to S3 before Terraform runs.
+# # ------------------------------------------------------------------
 
-resource "aws_lambda_function" "etl_pipeline" {
-  function_name = "${var.project_name}-function"
-  role          = aws_iam_role.lambda_exec.arn
+# resource "aws_lambda_function" "etl_pipeline" {
+#   function_name = "${var.project_name}-function"
+#   role          = aws_iam_role.lambda_exec.arn
 
-  # Package uploaded to S3 by deploy.ps1
-  s3_bucket = aws_s3_bucket.data_lake.bucket
-  s3_key    = "lambda/deployment_package.zip"
+#   # Package uploaded to S3 by deploy.ps1
+#   s3_bucket = aws_s3_bucket.data_lake.bucket
+#   s3_key    = "lambda/deployment_package.zip"
 
-  # handler = "filename.function_name" inside your zip
-  handler = "lambda_handler.lambda_handler"
-  runtime = "python3.11"
+#   # handler = "filename.function_name" inside your zip
+#   handler = "lambda_handler.lambda_handler"
+#   runtime = "python3.11"
 
-  # 15 minutes — maximum Lambda allows
-  # 300k row pipeline needs the full window
-  timeout = 900
+#   # 15 minutes — maximum Lambda allows
+#   # 300k row pipeline needs the full window
+#   timeout = 900
 
-  # 1024MB gives Lambda more CPU allocation — speeds up pandas operations
-  memory_size = 1024
+#   # 1024MB gives Lambda more CPU allocation — speeds up pandas operations
+#   memory_size = 1024
 
-  # Run Lambda inside your VPC so it can reach RDS directly
-  vpc_config {
-    subnet_ids         = [aws_subnet.public_1.id, aws_subnet.public_2.id]
-    security_group_ids = [aws_security_group.lambda.id]
-  }
+#   # Run Lambda inside your VPC so it can reach RDS directly
+#   vpc_config {
+#     subnet_ids         = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+#     security_group_ids = [aws_security_group.lambda.id]
+#   }
 
-  # Environment variables — Lambda reads these instead of .env file
-  # These replace your local .env when running in the cloud
-  environment {
-    variables = {
-      DB_HOST          = aws_db_instance.main.address
-      DB_PORT          = "3306"
-      DB_NAME          = var.db_name
-      DB_USER          = var.db_username
-      DB_PASSWORD      = var.db_password
-      RAW_FILE_PATH    = "s3://${aws_s3_bucket.data_lake.bucket}/raw/chicago_Food_Inspections.csv"
-      PARQUET_FILE_PATH = "s3://${aws_s3_bucket.data_lake.bucket}/parquet/chicago_food_inspections_clean.parquet"
-    }
-  }
+#   # Environment variables — Lambda reads these instead of .env file
+#   # These replace your local .env when running in the cloud
+#   environment {
+#     variables = {
+#       DB_HOST          = aws_db_instance.main.address
+#       DB_PORT          = "3306"
+#       DB_NAME          = var.db_name
+#       DB_USER          = var.db_username
+#       DB_PASSWORD      = var.db_password
+#       RAW_FILE_PATH    = "s3://${aws_s3_bucket.data_lake.bucket}/raw/chicago_Food_Inspections.csv"
+#       PARQUET_FILE_PATH = "s3://${aws_s3_bucket.data_lake.bucket}/parquet/chicago_food_inspections_clean.parquet"
+#     }
+#   }
 
-  tags = {
-    Name    = "${var.project_name}-function"
-    Project = var.project_name
-  }
+#   tags = {
+#     Name    = "${var.project_name}-function"
+#     Project = var.project_name
+#   }
 
-  # Terraform must wait for the deployment package to exist in S3
-  depends_on = [aws_iam_role_policy_attachment.lambda_logs]
-}
+#   # Terraform must wait for the deployment package to exist in S3
+#   depends_on = [aws_iam_role_policy_attachment.lambda_logs]
+# }
 
-# ------------------------------------------------------------------
-# EventBridge Rule — the schedule
-# cron(minutes hours day month day-of-week year)
-# cron(0 6 * * ? *) = every day at 6:00 AM UTC
-# ------------------------------------------------------------------
+# # ------------------------------------------------------------------
+# # EventBridge Rule — the schedule
+# # cron(minutes hours day month day-of-week year)
+# # cron(0 6 * * ? *) = every day at 6:00 AM UTC
+# # ------------------------------------------------------------------
 
-resource "aws_cloudwatch_event_rule" "pipeline_schedule" {
-  name                = "${var.project_name}-schedule"
-  description         = "Triggers ETL pipeline Lambda on a daily schedule"
-  schedule_expression = var.schedule_expression
+# resource "aws_cloudwatch_event_rule" "pipeline_schedule" {
+#   name                = "${var.project_name}-schedule"
+#   description         = "Triggers ETL pipeline Lambda on a daily schedule"
+#   schedule_expression = var.schedule_expression
 
-  tags = {
-    Name    = "${var.project_name}-schedule"
-    Project = var.project_name
-  }
-}
+#   tags = {
+#     Name    = "${var.project_name}-schedule"
+#     Project = var.project_name
+#   }
+# }
 
-# Target — which Lambda to trigger when the rule fires
-resource "aws_cloudwatch_event_target" "lambda_target" {
-  rule      = aws_cloudwatch_event_rule.pipeline_schedule.name
-  target_id = "ETLPipelineLambda"
-  arn       = aws_lambda_function.etl_pipeline.arn
-}
+# # Target — which Lambda to trigger when the rule fires
+# resource "aws_cloudwatch_event_target" "lambda_target" {
+#   rule      = aws_cloudwatch_event_rule.pipeline_schedule.name
+#   target_id = "ETLPipelineLambda"
+#   arn       = aws_lambda_function.etl_pipeline.arn
+# }
 
-# Permission — allows EventBridge to actually invoke the Lambda
-resource "aws_lambda_permission" "allow_eventbridge" {
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.etl_pipeline.function_name
-  principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_event_rule.pipeline_schedule.arn
-}
+# # Permission — allows EventBridge to actually invoke the Lambda
+# resource "aws_lambda_permission" "allow_eventbridge" {
+#   statement_id  = "AllowExecutionFromEventBridge"
+#   action        = "lambda:InvokeFunction"
+#   function_name = aws_lambda_function.etl_pipeline.function_name
+#   principal     = "events.amazonaws.com"
+#   source_arn    = aws_cloudwatch_event_rule.pipeline_schedule.arn
+# }

@@ -3,6 +3,16 @@
 # Stores raw CSV files and transformed Parquet files
 # ==============================================================
 
+variable "project_name" {
+  description = "Name of the project used to construct resource names"
+  type        = string
+}
+
+variable "aws_region" {
+  description = "AWS region used for the S3 VPC endpoint service name"
+  type        = string
+}
+
 resource "aws_s3_bucket" "data_lake" {
   bucket = "${var.project_name}-data-lake-${data.aws_caller_identity.current.account_id}"
 
