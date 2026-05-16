@@ -1,6 +1,7 @@
 # ==============================================================
-# main.tf — ETL Pipeline AWS Infrastructure
-# Provisions: VPC, Subnets, IGW, Route Table, Security Group, RDS
+# main.tf — ETL Pipeline AWS Infrastructure (Simplified)
+# 2 public subnets across 2 AZs — satisfies RDS requirement
+# Security group restricts access to your IP only
 # ==============================================================
 
 terraform {
@@ -13,19 +14,19 @@ terraform {
   required_version = ">= 1.3.0"
 }
 
-# Configure the AWS provider
 provider "aws" {
   region = var.aws_region
 }
 
 # ==============================================================
 # VPC
+# Your isolated private network in AWS
 # ==============================================================
 
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
-  enable_dns_support   = true    # allows resources inside VPC to resolve DNS
-  enable_dns_hostnames = true    # gives RDS a DNS hostname you can connect to
+  enable_dns_support   = true
+  enable_dns_hostnames = true
 
   tags = {
     Name    = "${var.project_name}-vpc"
@@ -34,53 +35,39 @@ resource "aws_vpc" "main" {
 }
 
 # ==============================================================
-# SUBNETS
-# Subnets are subdivisions of your VPC.
-# Private subnets have no route to the internet — RDS sits here.
-# Public subnet has internet access — for Lambda / future use.
-# RDS requires a minimum of 2 subnets in different AZs for its
-# subnet group, even on single-AZ free tier instances.
+# PUBLIC SUBNETS — one in each AZ
+# Both are public so RDS gets a reachable endpoint
+# Security group is what restricts who can actually connect
 # ==============================================================
 
-resource "aws_subnet" "private_1" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnet_1_cidr
-  availability_zone = var.az_1
-
-  tags = {
-    Name    = "${var.project_name}-private-subnet-1"
-    Project = var.project_name
-  }
-}
-
-resource "aws_subnet" "private_2" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnet_2_cidr
-  availability_zone = var.az_2
-
-  tags = {
-    Name    = "${var.project_name}-private-subnet-2"
-    Project = var.project_name
-  }
-}
-
-resource "aws_subnet" "public" {
+resource "aws_subnet" "public_1" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = var.public_subnet_cidr
+  cidr_block              = var.public_subnet_1_cidr
   availability_zone       = var.az_1
-  map_public_ip_on_launch = true   # instances in this subnet get a public IP
+  map_public_ip_on_launch = true
 
   tags = {
-    Name    = "${var.project_name}-public-subnet"
+    Name    = "${var.project_name}-public-subnet-1"
+    Project = var.project_name
+  }
+}
+
+resource "aws_subnet" "public_2" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_2_cidr
+  availability_zone       = var.az_2
+  map_public_ip_on_launch = true
+
+  tags = {
+    Name    = "${var.project_name}-public-subnet-2"
     Project = var.project_name
   }
 }
 
 # ==============================================================
 # INTERNET GATEWAY
-# Attaches your VPC to the internet.
-# Without this, nothing in your VPC can reach the outside world
-# and nothing outside can reach in — even through the public subnet.
+# Connects your VPC to the internet
+# Without this, nothing in your subnets is reachable externally
 # ==============================================================
 
 resource "aws_internet_gateway" "main" {
@@ -94,6 +81,7 @@ resource "aws_internet_gateway" "main" {
 
 # ==============================================================
 # ROUTE TABLE
+# Associated with both public subnets
 # ==============================================================
 
 resource "aws_route_table" "public" {
@@ -110,16 +98,19 @@ resource "aws_route_table" "public" {
   }
 }
 
-# Associate the route table with the public subnet
-resource "aws_route_table_association" "public" {
-  subnet_id      = aws_subnet.public.id
+resource "aws_route_table_association" "public_1" {
+  subnet_id      = aws_subnet.public_1.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "public_2" {
+  subnet_id      = aws_subnet.public_2.id
   route_table_id = aws_route_table.public.id
 }
 
 # ==============================================================
 # SECURITY GROUP
-# Inbound: only port 3306 (MySQL) from your IP — nothing else
-# Outbound: all traffic allowed (standard for internal comms)
+# Port 3306 open to your IP only — everything else blocked
 # ==============================================================
 
 resource "aws_security_group" "rds" {
@@ -127,7 +118,6 @@ resource "aws_security_group" "rds" {
   description = "Security group for ETL pipeline RDS MySQL instance"
   vpc_id      = aws_vpc.main.id
 
-  # Inbound rule — MySQL port, your IP only
   ingress {
     description = "MySQL access from developer IP only"
     from_port   = 3306
@@ -136,12 +126,11 @@ resource "aws_security_group" "rds" {
     cidr_blocks = [var.my_ip_cidr]
   }
 
-  # Outbound rule — allow all outbound traffic
   egress {
     description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
-    protocol    = "-1"          # -1 means all protocols
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -153,15 +142,15 @@ resource "aws_security_group" "rds" {
 
 # ==============================================================
 # DB SUBNET GROUP
-# Tells RDS which subnets it's allowed to place itself into.
+# Spans both public subnets across 2 AZs
 # ==============================================================
 
 resource "aws_db_subnet_group" "main" {
   name        = "${var.project_name}-db-subnet-group"
-  description = "Subnet group for ETL pipeline RDS which spans 2 private subnets"
+  description = "Subnet group for ETL pipeline RDS - spans 2 public subnets across 2 AZs"
   subnet_ids  = [
-    aws_subnet.private_1.id,
-    aws_subnet.private_2.id
+    aws_subnet.public_1.id,
+    aws_subnet.public_2.id
   ]
 
   tags = {
@@ -172,25 +161,14 @@ resource "aws_db_subnet_group" "main" {
 
 # ==============================================================
 # RDS MYSQL INSTANCE
-# The actual database — provisioned inside the private subnet,
-# protected by the security group, within your VPC.
-#
-# Key settings explained:
-#   publicly_accessible = true  → needed so your laptop can connect
-#                                 even though it's in a private subnet.
-#                                 The security group still restricts
-#                                 access to your IP only — this just
-#                                 gives it a public DNS endpoint.
-#   skip_final_snapshot = true  → on destroy, don't take a snapshot.
-#                                 Fine for dev/portfolio — saves cost.
-#   multi_az = false            → single AZ is free tier eligible.
-#                                 Multi-AZ doubles cost.
+# Sits in the public subnet group
+# Accessible only from your IP via the security group
 # ==============================================================
 
 resource "aws_db_instance" "main" {
   identifier        = "${var.project_name}-db"
   engine            = "mysql"
-  engine_version    = "8.0.46"  # latest MySQL 8.0 version as of June 2024
+  engine_version    = "8.0"
   instance_class    = var.db_instance_class
   allocated_storage = var.db_allocated_storage
 
@@ -201,11 +179,9 @@ resource "aws_db_instance" "main" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
 
-  publicly_accessible = true    # security group limits access to your IP
-  multi_az            = false   # single AZ — free tier
-  skip_final_snapshot = true    # no snapshot on terraform destroy
-
-  # Disable automated backups — saves on free tier storage
+  publicly_accessible     = true
+  multi_az                = false
+  skip_final_snapshot     = true
   backup_retention_period = 0
 
   tags = {
