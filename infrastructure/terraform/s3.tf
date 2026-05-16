@@ -3,16 +3,6 @@
 # Stores raw CSV files and transformed Parquet files
 # ==============================================================
 
-variable "project_name" {
-  description = "Name of the project used to construct resource names"
-  type        = string
-}
-
-variable "aws_region" {
-  description = "AWS region used for the S3 VPC endpoint service name"
-  type        = string
-}
-
 resource "aws_s3_bucket" "data_lake" {
   bucket = "${var.project_name}-data-lake-${data.aws_caller_identity.current.account_id}"
 
@@ -33,7 +23,6 @@ resource "aws_s3_bucket_public_access_block" "data_lake" {
 }
 
 # Versioning — keeps previous versions of files if they get overwritten
-# Useful for debugging if a bad transform overwrites your Parquet
 resource "aws_s3_bucket_versioning" "data_lake" {
   bucket = aws_s3_bucket.data_lake.id
 
@@ -44,9 +33,7 @@ resource "aws_s3_bucket_versioning" "data_lake" {
 
 # ==============================================================
 # VPC GATEWAY ENDPOINT FOR S3
-# Allows Lambda (inside your VPC) to reach S3 without going
-# through the public internet — traffic stays within AWS network.
-# no NAT gateway needed.
+# Allows Lambda inside the VPC to reach S3 without NAT gateway
 # ==============================================================
 
 resource "aws_vpc_endpoint" "s3" {
@@ -61,6 +48,6 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
-# Data source — gets your AWS account ID dynamically
-# Used to make the S3 bucket name globally unique
+# Gets your AWS account ID dynamically
+# Makes the bucket name globally unique
 data "aws_caller_identity" "current" {}
