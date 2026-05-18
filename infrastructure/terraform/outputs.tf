@@ -27,10 +27,10 @@ output "rds_security_group_id" {
   value = aws_security_group.rds.id
 }
 
-# output "s3_bucket_name" {
-#   description = "S3 data lake bucket name - use this to upload your CSV"
-#   value       = aws_s3_bucket.data_lake.bucket
-# }
+output "s3_bucket_name" {
+  description = "S3 data lake bucket name - use this to upload your CSV"
+  value       = aws_s3_bucket.data_lake.bucket
+}
 
 # output "lambda_function_name" {
 #   description = "Lambda function name - use this to invoke manually"

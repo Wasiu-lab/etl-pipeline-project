@@ -1,36 +1,14 @@
-# 🛠️ Local ETL Pipeline — Python · MySQL · Parquet
+# ETL Pipeline — Python · MySQL · AWS
 
-A production-style ETL pipeline built for learning and portfolio purposes.  
-Ingests open CSV data, transforms it with Python, writes Parquet files as a data lake layer, and loads into MySQL as a data warehouse layer — with cloud deployment via Railway.app.
+A production-style ETL pipeline for learning and portfolio purposes. Ingests Chicago food inspection data, transforms with Python, stores as Parquet (data lake), and loads into MySQL (data warehouse). Deployed on AWS with Lambda, EventBridge, S3, and RDS.
 
----
+## 🎯 Project Purpose
 
-## 📌 Project Status
-
-| Phase | Description | Status |
-|-------|-------------|--------|
-| Phase 1 | Project setup & environment configuration | ✅ Complete |
-| Phase 2 | Extract — ingest open CSV data | 🔜 Up next |
-| Phase 3 | Transform — clean & reshape with pandas | ⏳ Pending |
-| Phase 4 | Load — write Parquet + load to MySQL | ⏳ Pending |
-| Phase 5 | Query & validate | ⏳ Pending |
-| Phase 6 | Cloud deployment (Railway.app) | ⏳ Pending |
-
----
-
-## 🧱 Tech Stack
-
-| Layer | Tool |
-|-------|------|
-| Language | Python 3.11+ |
-| Data transformation | pandas |
-| File format | Parquet (via pyarrow) |
-| Database | MySQL |
-| DB connector | SQLAlchemy + mysql-connector-python |
-| Credentials management | python-dotenv |
-| Cloud DB (Phase 6) | Railway.app (free tier) |
-| Version control | Git + GitHub |
-| Editor | VS Code |
+Build a **real-world ETL system** that demonstrates:
+- End-to-end data pipeline architecture (Extract → Transform → Load)
+- Separation of concerns: raw data layer (S3), transformed layer (Parquet), and queryable warehouse (MySQL)
+- Cloud deployment with automated scheduling (Lambda + EventBridge)
+- Professional project structure and credential management
 
 ---
 
@@ -39,194 +17,157 @@ Ingests open CSV data, transforms it with Python, writes Parquet files as a data
 ```
 etl-pipeline-project/
 │
-├── data/
-│   ├── raw/               ← Downloaded CSVs (source data)
-│   └── parquet/           ← Transformed Parquet files (data lake layer)
+├── data/                          # Local data storage
+│   ├── raw/                       # Raw CSV files (source)
+│   └── parquet/                   # Parquet files (data lake)
 │
-├── etl/
-│   ├── extract.py         ← Step 1: Load CSV into pandas DataFrame
-│   ├── transform.py       ← Step 2: Clean, reshape, and enrich data
-│   ├── load.py            ← Step 3: Write Parquet + load into MySQL
-│   └── pipeline.py        ← Orchestrates all 3 ETL steps
+├── etl/                           # Core pipeline logic
+│   ├── extract.py                 # Step 1: Load CSV → pandas
+│   ├── transform.py               # Step 2: Clean & reshape
+│   ├── load.py                    # Step 3: Write Parquet + MySQL
+│   └── pipeline.py                # Orchestrate ETL flow
 │
-├── sql/
-│   └── create_tables.sql  ← MySQL schema definitions
+├── infrastructure/                # AWS cloud setup
+│   ├── terraform/                 # IaC for AWS resources
+│   │   ├── iam.tf                 # Lambda execution roles
+│   │   ├── lambda.tf              # Lambda function config
+│   │   ├── s3.tf                  # S3 bucket definitions
+│   │   ├── rds.tf                 # RDS MySQL instance
+│   │   ├── vpc.tf                 # VPC networking
+│   │   └── eventbridge.tf          # EventBridge scheduling
+│   └── lambda/                    # Lambda deployment package
 │
-├── notebooks/
-│   └── explore.ipynb      ← EDA and query result visualisations
+├── sql/                           # Database schema
+│   └── create_tables.sql          # MySQL table definitions
 │
-├── test_connection.py     ← Verifies MySQL connection on setup
-├── requirements.txt       ← Python dependencies
-├── .env                   ← DB credentials (gitignored)
-├── .gitignore
-└── README.md
+├── notebooks/                     # EDA & analysis
+│   └── explore.ipynb              # Query results & visualizations
+│
+├── requirements.txt               # Python dependencies
+├── .env                           # Credentials (gitignored)
+├── test_connection.py             # MySQL connection test
+└── README.md                      # This file
 ```
 
-┌─────────────────────────────────────────────────────────────────┐
-│                          AWS Cloud                              │
-│                                                                 │
-│  ┌─────────────────┐                                            │
-│  │   EventBridge   │  "Run every day at 6am UTC"                │
-│  └────────┬────────┘                                            │
-│           │ triggers                                            │
-│           ▼                                                     │
-│  ┌─────────────────┐                                            │
-│  │     Lambda      │  ← runs your pipeline.py                   │
-│  │  (in your VPC)  │                                            │
-│  └────┬───────┬────┘                                            │
-│       │       │                                                 │
-│  reads CSV  writes Parquet                                      │
-│       │       │                                                 │
-│       ▼       ▼                                                 │
-│  ┌─────────────────┐                                            │
-│  │   S3 Bucket     │                                            │
-│  │  /raw/  (CSV)   │  ← your data lake                          │
-│  │  /parquet/      │                                            │
-│  └─────────────────┘                                            │
-│       │                                                         │
-│  loads into                                                     │
-│       ▼                                                         │
-│  ┌─────────────────┐                                            │
-│  │   RDS MySQL     │  ← your data warehouse                     │
-│  └─────────────────┘                                            │
-└─────────────────────────────────────────────────────────────────┘
 ---
 
-## ⚙️ Local Setup
+## 🧱 Tech Stack
 
-### 1. Clone the repository
+| Category | Technology |
+|----------|------------|
+| **Language** | Python 3.11+ |
+| **Data Processing** | pandas, pyarrow |
+| **Database** | MySQL 8.0 |
+| **ORM** | SQLAlchemy |
+| **Cloud Provider** | AWS |
+| **Compute** | Lambda |
+| **Orchestration** | EventBridge |
+| **Storage** | S3, RDS |
+| **IaC** | Terraform |
+| **Secrets** | python-dotenv |
 
-```bash
-git clone https://github.com/YOUR_USERNAME/etl-pipeline-project.git
-cd etl-pipeline-project
+---
+
+## ⚙️ How It Works
+
+**Local Pipeline:**
+```
+CSV → extract.py → pandas DataFrame → transform.py → Parquet → load.py → MySQL
 ```
 
-### 2. Create and activate a virtual environment
+**Cloud Pipeline:**
+```
+EventBridge (6am UTC) → Lambda → S3 (CSV read/Parquet write) → RDS MySQL
+```
 
+**Architecture:**
+```
+┌─── AWS Cloud ───────────────────────────────────┐
+│                                                 │
+│  EventBridge (trigger) → Lambda (VPC) → S3    │
+│                            ↓                    │
+│                         RDS MySQL              │
+│                                                 │
+└─────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Quick Start (Local)
+
+
+### 1. Clone & setup
 ```bash
+git clone <repo> && cd etl-pipeline-project
 python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Mac/Linux
-source venv/bin/activate
-```
-
-### 3. Install dependencies
-
-```bash
+# Windows: venv\Scripts\activate
+# Mac/Linux: source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
-
-Create a `.env` file in the project root:
-
+### 2. Configure `.env`
 ```
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=etl_pipeline
-DB_USER=your_mysql_username
-DB_PASSWORD=your_mysql_password
+DB_USER=root
+DB_PASSWORD=your_password
 ```
 
-### 5. Create the MySQL database
-
-```sql
-CREATE DATABASE IF NOT EXISTS etl_pipeline;
-```
-
-### 6. Verify the connection
-
+### 3. Create database & verify
 ```bash
+# In MySQL: CREATE DATABASE IF NOT EXISTS etl_pipeline;
 python test_connection.py
 ```
 
-Expected output:
-```
-✅ Connected to: etl_pipeline
-```
-
----
-
-## 📦 Dependencies
-
-```
-pandas
-pyarrow
-sqlalchemy
-mysql-connector-python
-python-dotenv
-```
-
-Install all with:
-
+### 4. Run pipeline
 ```bash
-pip install -r requirements.txt
+python etl/pipeline.py
 ```
 
 ---
 
 ## 📊 Dataset
 
-Source: [Chicago Open Data Portal — Food Inspections](https://data.cityofchicago.org/Health-Human-Services/Food-Inspections/4ijn-s7e5/about_data)
-
----
-
-## 🔄 Pipeline Overview
-
-```
-[CSV Source]
-     ↓
-  extract.py       ← reads raw CSV into pandas
-     ↓
-  transform.py     ← cleans, reshapes, remove nulls, and adds derived columns
-     ↓
-  data/parquet/    ← saves as Parquet (data lake)
-     ↓
-  load.py          ← reads Parquet, loads into MySQL
-     ↓
-[MySQL Database]   ← queryable data warehouse layer
-```
+[Chicago Open Data Portal — Food Inspections](https://data.cityofchicago.org/Health-Human-Services/Food-Inspections/4ijn-s7e5/about_data)
 
 ---
 
 ## ☁️ Cloud Deployment
 
+Pipeline runs on **AWS** with:
+- **Lambda**: Executes `pipeline.py` on schedule (in VPC)
+- **EventBridge**: Triggers daily at 6 AM UTC
+- **S3**: Stores raw CSVs and Parquet files
+- **RDS MySQL**: Data warehouse (eu-west-2, db.t3.micro free tier)
 
-The pipeline will be repointed to a cloud-hosted MySQL instance on **Railway.app** (free tier) to simulate a real-world production environment. No code changes is required — only the `.env` credentials will be updated to that of the cloud.
+**Setup**: Same code, different `.env` credentials for cloud endpoints.
+
+---
+
+## 📌 Project Status
+
+- ✅ Project structure & local setup
+- ✅ ETL pipeline (extract, transform, load)
+- ✅ MySQL integration
+- ✅ AWS infrastructure (Terraform)
+- ✅ Lambda deployment
+- 🔄 Production testing & monitoring
 
 ---
 
-## 🧠 Key Concepts Covered
+## 📚 Key Concepts
 
-- ETL pipeline design (Extract → Transform → Load)
-- Separation of raw vs. curated data layers
-- Parquet as a columnar storage format
-- MySQL as a relational data warehouse
-- Managing credentials securely with `.env`
-- Structuring Python projects for readability and reuse
-
----
-## Cloud Deployment
-
-The pipeline is deployed against a live **AWS RDS MySQL** instance (free tier).
-
-| Component       | Detail                              |
-|-----------------|-------------------------------------|
-| Cloud Provider  | Amazon Web Services (AWS)           |
-| Service         | Amazon RDS                          |
-| Engine          | MySQL 8.0                           |
-| Instance type   | db.t3.micro (free tier)             |
-| Region          | eu-west-2 (London)                  |
-| Access          | Public endpoint, restricted by IP   |
-
-Same pipeline code runs locally and in cloud — only `.env` credentials change.
+- Data pipeline orchestration (ETL)
+- Data layer separation: raw (S3) → curated (Parquet) → warehouse (MySQL)
+- Columnar storage (Parquet) for analytics
+- Relational databases for querying
+- Infrastructure-as-Code (Terraform)
+- Scheduled cloud jobs (EventBridge + Lambda)
 
 ---
+
 ## 👤 Author
 
-**Abdul**  
-Data Engineer | Building production-style data pipelines  
+**Abdul** — Data Engineer  
 [GitHub](https://github.com/YOUR_USERNAME) · [LinkedIn](https://linkedin.com/in/YOUR_PROFILE)
